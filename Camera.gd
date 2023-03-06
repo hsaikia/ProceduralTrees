@@ -1,10 +1,10 @@
-extends Camera
+extends Camera3D
 
 var cam_dist = 10.0
 var cam_theta = 0.0
 var cam_phi = 0.0
-var cam_target = Vector3(0, 0, 0)
-export var mouse_sensitivity = 0.3
+var cam_target = Vector3(0, 2, 0)
+@export var mouse_sensitivity = 0.3
 var dragging = false
 
 func set_camera():
@@ -18,25 +18,25 @@ func set_camera():
 
 func _input(event):
 	if event is InputEventMouseButton:
-		if event.get_button_index() == BUTTON_WHEEL_UP:
+		if event.get_button_index() == MOUSE_BUTTON_WHEEL_UP:
 			if event.is_pressed():
 				cam_dist += mouse_sensitivity
 				set_camera()
 				return
-		elif event.get_button_index() == BUTTON_WHEEL_DOWN:
+		elif event.get_button_index() == MOUSE_BUTTON_WHEEL_DOWN:
 			if event.is_pressed():
 				cam_dist -= mouse_sensitivity
 				set_camera()
 				return
-		elif event.get_button_index() == BUTTON_LEFT:
+		elif event.get_button_index() == MOUSE_BUTTON_LEFT:
 			if event.pressed:
 				dragging = true
 			else:
 				dragging = false
 		
 	if dragging and event is InputEventMouseMotion:
-		cam_theta -= deg2rad(event.relative.x * mouse_sensitivity)
-		cam_phi -= deg2rad(event.relative.y * mouse_sensitivity)
+		cam_theta -= deg_to_rad(event.relative.x * mouse_sensitivity)
+		cam_phi -= deg_to_rad(event.relative.y * mouse_sensitivity)
 		set_camera()
 
 func _ready():

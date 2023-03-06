@@ -1,17 +1,17 @@
-extends Spatial
+extends Node3D
 
 # Mesh geometry
 var tmpMesh = Mesh.new()
-var vertices = PoolVector3Array()
-var normals = PoolVector3Array()
-var UVs = PoolVector2Array()
-var indices = PoolIntArray() 
+var vertices = PackedVector3Array()
+var normals = PackedVector3Array()
+var UVs = PackedVector2Array()
+var indices = PackedInt32Array() 
 
 # RNG
 var rng = RandomNumberGenerator.new()
 
 # granularity of cone
-var num_divisions = 10
+var num_divisions = 20
 # height offset fraction \in [0,1] from base to spawn first new branch
 var offset_frac0 = 0.3 
 # height offset fraction \in [0, 1] from base of one child branch to the next
@@ -34,14 +34,9 @@ func draw_tree(p1 : Vector3, p2: Vector3, r1: float, r2: float, depth: int, idx:
 	if depth == 0:
 		return
 	var l = (p2 - p1).length()
-	#print(l)
 	var d = p1.direction_to(p2)
-	#print(d)
 	var h1 = d.cross(Vector3.RIGHT)
-	#print(h1)
 	var h2 = d.cross(h1)
-	#print(h2)
-	#print("P1 ", p1, " P2 ", p2, "d ", d, " R1 ", r1, " R2 ", r2, " depth ", depth, " length ", l, " h1 ", h1, " h2 ", h2)
 	var inc = 2 * PI / num_divisions
 	for i in range(num_divisions):
 		var angle = i * inc
@@ -63,7 +58,7 @@ func draw_tree(p1 : Vector3, p2: Vector3, r1: float, r2: float, depth: int, idx:
 		indices.append(idx1b)
 	var angle_1 = 0 # rng.randf_range(0.0, PI / 2)
 	for b in range(num_branches):
-		var offset_frac_i = offset_frac0 + b * offset_frac
+		var offset_frac_i = offset_frac0 * (1 + b * offset_frac / num_branches)
 		var branch_i1 = p1 * (1 - offset_frac_i) + p2 * offset_frac_i
 		var angle = angle_1 + b * (2 * PI) / num_branches
 		var dir = h1 * cos(angle) + h2 * sin(angle) + d
@@ -71,12 +66,11 @@ func draw_tree(p1 : Vector3, p2: Vector3, r1: float, r2: float, depth: int, idx:
 		draw_tree(branch_i1, branch_i1 + dir * branch_len_scale * l, r1 * branch_width_scale, r2 * branch_width_scale, depth - 1, len(vertices))
 
 func generate():
-	vertices = PoolVector3Array()
-	normals = PoolVector3Array()
-	UVs = PoolVector2Array()
-	indices = PoolIntArray() 
+	vertices = PackedVector3Array()
+	normals = PackedVector3Array()
+	UVs = PackedVector2Array()
+	indices = PackedInt32Array() 
 	draw_tree(Vector3(0, 0, 0), Vector3(0, initial_height, 0), initial_r1, initial_r2, max_depth, 0)
-	#print("Vertices ", len(vertices))
 	var arrays = []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = vertices
@@ -84,9 +78,17 @@ func generate():
 	arrays[Mesh.ARRAY_NORMAL] = normals
 	arrays[Mesh.ARRAY_INDEX] = indices
 
-	if $ProceduralMesh.mesh.get_surface_count() > 0:
-		$ProceduralMesh.mesh.surface_remove(0)
-	$ProceduralMesh.mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var arr_mesh = ArrayMesh.new()
+	arr_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	$ProceduralMesh.set_mesh(arr_mesh)
+
+func _input(event):
+	if event.is_action_released("gen_random"):
+		initial_height = rng.randf_range(5.0, 8.0)
+		initial_r1 = rng.randf_range(0.3, 1.0)
+		initial_r2 = rng.randf_range(0.0, initial_r1)
+		max_depth = rng.randi_range(2, 5)
+		generate()
 
 func _ready():
 	rng.randomize()
